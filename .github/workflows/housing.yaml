@@ -30,3 +30,11 @@ jobs:
       run: |
         python regression.py
     
+    - name: Run hyperparameter optimization (if on hyper_branch)
+      if: github.ref == 'refs/heads/hyper_branch'
+      run: python hyperparameter_tuning.py
+      
+    - name: Run tests
+      run: |
+        pytest test_regression.py -v
+        pytest test_hyperparameter.py -v
