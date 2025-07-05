@@ -4,6 +4,7 @@ from utils import (
     evaluate_model, save_model, plot_results, generate_performance_report
 )
 import os
+import json
 
 def main():
     
@@ -33,13 +34,6 @@ def main():
         models['Linear Regression'], X_test, y_test, 'Linear Regression'
     )
     
-    # Random Forest
-    print("Training Random Forest...")
-    models['Random Forest'] = train_random_forest(X_train, y_train)
-    results['Random Forest'] = evaluate_model(
-        models['Random Forest'], X_test, y_test, 'Random Forest'
-    )
-    
     # Ridge Regression
     print("Training Ridge Regression...")
     models['Ridge'] = train_ridge(X_train, y_train)
@@ -52,6 +46,13 @@ def main():
     models['Lasso'] = train_lasso(X_train, y_train)
     results['Lasso'] = evaluate_model(
         models['Lasso'], X_test, y_test, 'Lasso'
+    )
+    
+    # Random Forest (moved to last)
+    print("Training Random Forest...")
+    models['Random Forest'] = train_random_forest(X_train, y_train)
+    results['Random Forest'] = evaluate_model(
+        models['Random Forest'], X_test, y_test, 'Random Forest'
     )
     
     # Step 5: Save models
@@ -67,6 +68,11 @@ def main():
     # Step 7: Generate report
     print("\n7. Generating performance report...")
     generate_performance_report(results)
+
+    # Save basic results for comparison with hyperparameter tuning
+    basic_results_clean = {k: {'mse': v['mse'], 'r2': v['r2']} for k, v in results.items()}
+    with open('basic_results.json', 'w') as f:
+        json.dump(basic_results_clean, f, indent=2)
     
     print("\n=== Pipeline completed successfully! ===")
 
