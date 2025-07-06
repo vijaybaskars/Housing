@@ -234,28 +234,47 @@ def optimize_linear_regression(X_train, y_train):
     return best_models
 
 def optimize_random_forest(X_train, y_train):
-    """Conservative Random Forest optimization - small tweaks to good defaults"""
-    # The defaults are actually quite good! Let's only make small adjustments
+    """RF optimization with holdout validation to prevent CV overfitting"""
+    
+    # Split training data: 80% for optimization, 20% for validation
+    X_opt, X_val, y_opt, y_val = train_test_split(
+        X_train, y_train, test_size=0.2, random_state=42
+    )
+    
     param_grid = {
-        'n_estimators': [100, 150, 200],               # Small increase from default 100
-        'max_depth': [None],                           # Keep unlimited depth (default)
-        'min_samples_split': [2, 3],                   # Stay close to default 2
-        'min_samples_leaf': [1],                       # Keep default 1
-        'max_features': ['auto', 'sqrt'],              # Keep the most common options
-        'bootstrap': [True]                            # Keep default True
+        'n_estimators': [50, 100, 150],        # Include smaller values
+        'max_depth': [None, 30, 40],           # Try deeper + unlimited
+        'min_samples_split': [2],              # Stick with default
+        'min_samples_leaf': [1],               # Stick with default  
+        'max_features': ['sqrt', 'log2', 0.33] # Include sqrt (the default)
     }
     
     rf = RandomForestRegressor(random_state=42)
-    grid_search = GridSearchCV(
-        rf, param_grid, cv=3,                          # Reduced CV for speed
-        scoring='neg_mean_squared_error', n_jobs=-1, verbose=1
+    random_search = RandomizedSearchCV(
+        rf, param_grid, 
+        n_iter=15,  # Fewer iterations
+        cv=3,       # Fewer folds since we have holdout validation
+        scoring='neg_mean_squared_error', 
+        n_jobs=-1,
+        random_state=42
     )
-    grid_search.fit(X_train, y_train)
     
-    print(f"Best Random Forest params: {grid_search.best_params_}")
-    print(f"Best Random Forest score: {-grid_search.best_score_:.4f}")
+    # Optimize on subset
+    random_search.fit(X_opt, y_opt)
     
-    return grid_search.best_estimator_
+    # Validate on holdout
+    best_model = random_search.best_estimator_
+    val_score = best_model.score(X_val, y_val)
+    
+    print(f"Best RF params: {random_search.best_params_}")
+    print(f"CV score: {-random_search.best_score_:.4f}")
+    print(f"Holdout validation R²: {val_score:.4f}")
+    
+    # Retrain on full training set with best params
+    final_model = RandomForestRegressor(**random_search.best_params_, random_state=42)
+    final_model.fit(X_train, y_train)
+    
+    return final_model
 
 def optimize_ridge(X_train, y_train):
     """Optimize Ridge regression hyperparameters"""
